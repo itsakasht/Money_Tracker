@@ -3,7 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Money Tracker</title>
+
+  <!-- SVG App Logo / Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>">
+
+  <!-- Embedded Web App Manifest for PWABuilder -->
+  <script>
+    const manifest = {
+      "name": "Money Tracker",
+      "short_name": "Tracker",
+      "start_url": "./index.html",
+      "display": "standalone",
+      "background_color": "#090d16",
+      "theme_color": "#4f46e5",
+      "orientation": "portrait",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>",
+          "sizes": "512x512",
+          "type": "image/svg+xml",
+          "purpose": "any maskable"
+        }
+      ]
+    };
+    const stringManifest = JSON.stringify(manifest);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.getElementsByTagName('head')[0].appendChild(link);
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -30,10 +67,10 @@
 
   <main class="w-full max-w-md p-4 space-y-5">
     
-    <!-- Header -->
+    <!-- Header with Custom App Logo Icon -->
     <header class="flex justify-between items-center pt-2">
       <div class="flex items-center gap-2.5">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-600/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xl">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-600/30">
           ₹
         </div>
         <div>
@@ -49,7 +86,7 @@
       </div>
     </header>
 
-    <!-- 1. Add New Entry Form (Top) -->
+    <!-- Add New Entry Form (Top) -->
     <section class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
       <div class="flex justify-between items-center">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Add New Entry</h3>
@@ -57,7 +94,6 @@
       </div>
 
       <form id="tx-form" onsubmit="addTransaction(event)" class="space-y-4">
-        <!-- Type Switcher -->
         <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl">
           <button type="button" id="btn-expense" onclick="setType('expense')" class="py-2 text-xs font-semibold rounded-xl transition-all bg-rose-500 text-white shadow-sm">Expense</button>
           <button type="button" id="btn-income" onclick="setType('income')" class="py-2 text-xs font-semibold rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">Income</button>
@@ -82,7 +118,6 @@
           </div>
         </div>
 
-        <!-- Loan Settings -->
         <div id="people-options" class="hidden space-y-3 p-3.5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
           <label class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider block">Loan / Repayment Action</label>
           <div class="grid grid-cols-2 gap-2 text-xs font-medium">
@@ -106,7 +141,6 @@
           <input type="date" id="date" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer">
         </div>
 
-        <!-- Bill Splitting Toggle -->
         <div id="split-toggle-container" class="pt-1 flex items-center justify-between">
           <span class="text-xs text-slate-700 dark:text-slate-300 font-semibold">Split this bill with friends</span>
           <label for="is-split" class="relative inline-flex items-center cursor-pointer">
@@ -115,7 +149,6 @@
           </label>
         </div>
 
-        <!-- Dynamic Friends Split Section -->
         <div id="split-section" class="hidden space-y-3 p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
           <div class="flex justify-between items-center">
             <span class="text-xs font-semibold text-slate-400">Friend Shares</span>
@@ -219,18 +252,15 @@
       </div>
 
       <div class="grid grid-cols-2 gap-2 pt-1">
-        <!-- Unified Select / Direct Handle Sync Button -->
         <button onclick="selectOrSyncCSV()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5">
           <span>🔗</span> Select / Sync CSV
         </button>
 
-        <!-- Download CSV Backup Button -->
         <button onclick="exportCSV()" class="w-full py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 font-bold text-xs rounded-xl transition-all text-center">
           📥 Download CSV
         </button>
       </div>
 
-      <!-- Hidden Fallback Native File Input for Mobile Browsers -->
       <input type="file" id="mobile-csv-picker" accept=".csv" onchange="importMobileCSVFile(event)" class="hidden">
     </section>
 
@@ -245,7 +275,6 @@
 
     const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom\n";
 
-    // Theme Switcher
     function initTheme() {
       const savedTheme = localStorage.getItem('theme') || 'dark';
       if (savedTheme === 'dark') document.documentElement.classList.add('dark');
@@ -431,7 +460,6 @@
       link.click();
     }
 
-    // --- INDEXEDDB & UNIFIED CSV MANAGEMENT ---
     function openDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open("MoneyTrackerFileStore", 1);
@@ -466,7 +494,6 @@
     }
 
     async function selectOrSyncCSV() {
-      // Desktop API Check
       if ('showOpenFilePicker' in window) {
         try {
           const [handle] = await window.showOpenFilePicker({
@@ -481,10 +508,9 @@
           const content = await file.text();
           parseAndLoadCSV(content);
         } catch (err) {
-          console.log("File picker closed or cancelled", err);
+          console.log("File picker closed", err);
         }
       } else {
-        // Mobile Fallback Trigger
         document.getElementById('mobile-csv-picker').click();
       }
     }
@@ -815,11 +841,10 @@
       calendarGrid.innerHTML = gridHTML;
     }
 
-    // Startup Initialization
+    // Startup Execution
     initTheme();
     initYearDropdown();
 
-    // Auto-attempt IDB handle reloading silently on app boot
     loadHandleFromIDB().then(async (handle) => {
       if (handle) {
         fileHandle = handle;
@@ -830,10 +855,9 @@
           updateFileStatusUI(fileHandle.name);
           return;
         } catch (e) {
-          console.warn("Handle permission prompt needed or fallback to local storage");
+          console.warn("Handle permission or file access fallback");
         }
       }
-      // Fallback local storage state
       const localData = localStorage.getItem('transactions');
       if (localData) {
         transactions = JSON.parse(localData);
