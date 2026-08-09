@@ -170,7 +170,7 @@
       <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
     </section>
 
-    <!-- Recent Logs (With Dynamic Count & Pagination) -->
+    <!-- Recent Logs -->
     <section class="space-y-3">
       <div class="flex justify-between items-center px-1">
         <h3 id="recent-logs-header" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Logs</h3>
@@ -183,7 +183,6 @@
       
       <div id="tx-list" class="space-y-2"></div>
 
-      <!-- Expand / Collapse Toggle Button -->
       <div id="logs-expand-container" class="hidden text-center pt-1">
         <button id="logs-toggle-btn" onclick="toggleLogsExpand()" class="text-xs font-bold text-indigo-500 hover:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl transition-all">
           Show All
@@ -231,7 +230,7 @@
     // =================================================================
     const GOOGLE_CLIENT_ID = "75795599589-fqmlr74m2rostp84lu0sjmr59s6e2fqs.apps.googleusercontent.com";
     const GOOGLE_API_KEY = "AIzaSyBdMTpv9dD0Fp2W_-XRQPhy07k3BPA8Oo0";
-    const DRIVE_FILE_NAME = "money_tracker.csv";
+    const DRIVE_FILE_NAME = "money_tracker_database.csv";
     const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom,Note\n";
 
     const EXPENSE_CATEGORIES = [
@@ -259,7 +258,6 @@
     let pieChartInstance = null;
     let selectedGridDate = null;
 
-    // Pagination & Undo Stack State
     let isLogsExpanded = false;
     let lastDeletedStack = [];
     let undoToastTimer = null;
@@ -522,7 +520,6 @@
       setType('expense');
     }
 
-    // Delete with Soft-Delete & Undo Stack Trigger
     function deleteTransaction(id) {
       const idx = transactions.findIndex(tx => tx.id === id);
       if (idx !== -1) {
@@ -598,29 +595,52 @@
       link.click();
     }
 
+    // Helper to safely split CSV line accounting for quotes
+    function parseCSVLine(text) {
+      const result = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQuotes && text[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === ',' && !inQuotes) {
+          result.push(cur.trim());
+          cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      result.push(cur.trim());
+      return result;
+    }
+
+    // Robust CSV Parsing to ensure 'Note' is strictly column 8 and 'BorrowedFrom' is column 7
     function parseAndLoadCSV(csvText) {
       if (!csvText || !csvText.trim()) { transactions = []; saveAndRender(false); return; }
       const lines = csvText.trim().split('\n');
       if (lines.length <= 1) { transactions = []; saveAndRender(false); return; }
-    
+
       const loaded = [];
       for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
-        
-        // Robust CSV Regex to respect quoted strings containing commas
-        const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-        
+        const cols = parseCSVLine(lines[i]);
         if (cols && cols.length >= 6) {
-          const id = parseInt(cols[0].replace(/"/g, '')) || Date.now() + i;
-          const type = cols[1].replace(/"/g, '').trim();
-          const category = cols[2].replace(/"/g, '').trim();
-          const totalAmount = parseFloat(cols[3].replace(/"/g, '')) || 0;
-          const myShare = parseFloat(cols[4].replace(/"/g, '')) || 0;
-          const date = cols[5].replace(/"/g, '').trim();
-    
+          const id = parseInt(cols[0]) || Date.now() + i;
+          const type = cols[1].replace(/^"|"$/g, '').trim();
+          const category = cols[2].replace(/^"|"$/g, '').trim();
+          const totalAmount = parseFloat(cols[3]) || 0;
+          const myShare = parseFloat(cols[4]) || 0;
+          const date = cols[5].replace(/^"|"$/g, '').trim();
+
           let splits = [];
           if (cols[6]) {
-            const rawSplits = cols[6].replace(/"/g, '').trim();
+            const rawSplits = cols[6].replace(/^"|"$/g, '').trim();
             if (rawSplits) {
               splits = rawSplits.split(';').map(item => {
                 const [name, rest] = item.split(':');
@@ -628,27 +648,18 @@
               }).filter(s => s && s.name);
             }
           }
-    
-          // STRICT GUARD: Only populate borrowedFrom if category is explicitly 'People'
-          let borrowedFrom = null;
-          if (category === 'People' && cols[7]) {
-            const rawBorrowed = cols[7].replace(/"/g, '').trim();
-            if (rawBorrowed) borrowedFrom = rawBorrowed;
-          }
-    
-          // Safely assign note column (Column index 8)
-          let note = '';
-          if (cols[8]) {
-            note = cols[8].replace(/^"|"$/g, '').replace(/""/g, '"').trim();
-          }
-    
+
+          // Strictly Column 7 = Borrowed From, Column 8 = Note
+          const borrowedFrom = (cols[7] && cols[7].replace(/^"|"$/g, '').trim()) || null;
+          const note = (cols[8] && cols[8].replace(/^"|"$/g, '').trim()) || '';
+
           loaded.push({ id, type, category, totalAmount, myShare, date, splits, borrowedFrom, note });
         }
       }
-      
       transactions = loaded;
       saveAndRender(false);
     }
+
     function saveAndRender(syncDrive = true) {
       localStorage.setItem('transactions', JSON.stringify(transactions));
       if (syncDrive && accessToken) uploadToGoogleDrive(generateCSVString());
@@ -678,16 +689,20 @@
         if (t.splits) {
           t.splits.forEach(s => {
             const name = s.name.trim();
-            personTotals[name] = (personTotals[name] || 0) + s.amount;
-            if (!personHistory[name]) personHistory[name] = [];
-            personHistory[name].push({ date: t.date, desc: `${t.category} Split${t.note ? ` (${t.note})` : ''}`, amount: s.amount, type: 'lent' });
+            if (name) {
+              personTotals[name] = (personTotals[name] || 0) + s.amount;
+              if (!personHistory[name]) personHistory[name] = [];
+              personHistory[name].push({ date: t.date, desc: `${t.category} Split${t.note ? ` (${t.note})` : ''}`, amount: s.amount, type: 'lent' });
+            }
           });
         }
         if (t.borrowedFrom) {
           const name = t.borrowedFrom.trim();
-          personTotals[name] = (personTotals[name] || 0) - t.totalAmount;
-          if (!personHistory[name]) personHistory[name] = [];
-          personHistory[name].push({ date: t.date, desc: `Borrowed / Repaid${t.note ? ` (${t.note})` : ''}`, amount: t.totalAmount, type: 'borrowed' });
+          if (name) {
+            personTotals[name] = (personTotals[name] || 0) - t.totalAmount;
+            if (!personHistory[name]) personHistory[name] = [];
+            personHistory[name].push({ date: t.date, desc: `Borrowed / Repaid${t.note ? ` (${t.note})` : ''}`, amount: t.totalAmount, type: 'borrowed' });
+          }
         }
       });
 
@@ -770,7 +785,6 @@
         return;
       }
 
-      // Pagination Limit logic (Default 10)
       const limit = 10;
       let displayTxs = filteredTxs;
 
