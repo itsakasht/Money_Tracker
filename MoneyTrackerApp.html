@@ -209,9 +209,10 @@
 
   <script>
     // =================================================================
-    // ⚙️ PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+    // ⚙️ REPLACE WITH YOUR CREDENTIALS FROM GOOGLE CLOUD CONSOLE
     // =================================================================
     const GOOGLE_CLIENT_ID = "75795599589-fqmlr74m2rostp84lu0sjmr59s6e2fqs.apps.googleusercontent.com";
+    const GOOGLE_API_KEY = "AIzaSyBdMTpv9dD0Fp2W_-XRQPhy07k3BPA8Oo0";
     const DRIVE_FILE_NAME = "money_tracker.csv";
     const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom,Note\n";
 
@@ -280,7 +281,7 @@
     }
 
     function handleAuthClick() {
-      if (!tokenClient) return alert("Please add your Google Client ID into index.html!");
+      if (!tokenClient) return alert("Please set your Google Client ID!");
       tokenClient.requestAccessToken({ prompt: 'consent' });
     }
 
@@ -300,8 +301,10 @@
     async function syncWithGoogleDrive() {
       if (!accessToken) return;
       try {
+        const keyParam = GOOGLE_API_KEY && !GOOGLE_API_KEY.includes("YOUR_API_KEY") ? `&key=${GOOGLE_API_KEY}` : '';
+
         if (!driveFileId) {
-          const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false`, {
+          const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false${keyParam}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           const searchData = await searchRes.json();
@@ -312,7 +315,7 @@
         }
 
         if (driveFileId) {
-          const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+          const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media${keyParam}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           if (contentRes.ok) {
@@ -330,13 +333,15 @@
     async function uploadToGoogleDrive(csvContent) {
       if (!accessToken) return;
       try {
+        const keyParam = GOOGLE_API_KEY && !GOOGLE_API_KEY.includes("YOUR_API_KEY") ? `?key=${GOOGLE_API_KEY}` : '';
+
         if (!driveFileId) {
           const metadata = { name: DRIVE_FILE_NAME, mimeType: 'text/csv' };
           const form = new FormData();
           form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
           form.append('file', new Blob([csvContent], { type: 'text/csv' }));
 
-          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+          const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart${keyParam.replace('?', '&')}`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${accessToken}` },
             body: form
@@ -347,7 +352,7 @@
             localStorage.setItem('gdrive_file_id', driveFileId);
           }
         } else {
-          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media${keyParam.replace('?', '&')}`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'text/csv' },
             body: csvContent
