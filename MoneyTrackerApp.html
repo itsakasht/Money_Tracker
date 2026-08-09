@@ -230,7 +230,7 @@
     // =================================================================
     const GOOGLE_CLIENT_ID = "75795599589-fqmlr74m2rostp84lu0sjmr59s6e2fqs.apps.googleusercontent.com";
     const GOOGLE_API_KEY = "AIzaSyBdMTpv9dD0Fp2W_-XRQPhy07k3BPA8Oo0";
-    const DRIVE_FILE_NAME = "money_tracker_database.csv";
+    const DRIVE_FILE_NAME = "money_tracker.csv";
     const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom,Note\n";
 
     const EXPENSE_CATEGORIES = [
@@ -470,11 +470,23 @@
       container.appendChild(row);
     }
 
+    function formatDateToStandard(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = String(parts[1]).padStart(2, '0');
+        const d = String(parts[2]).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return dateStr;
+    }
+
     function addTransaction(e) {
       e.preventDefault();
       const totalAmount = parseFloat(document.getElementById('amount').value);
       const category = document.getElementById('category').value;
-      const date = document.getElementById('date').value;
+      const date = formatDateToStandard(document.getElementById('date').value);
       const note = document.getElementById('note').value.trim();
       const isSplit = document.getElementById('is-split').checked && currentType === 'expense';
 
@@ -582,7 +594,7 @@
       transactions.forEach(t => {
         const splitSummary = t.splits ? t.splits.map(s => `${s.name}:${s.amount}`).join(';') : '';
         const cleanNote = t.note ? t.note.replace(/"/g, '""') : '';
-        csv += `${t.id},${t.type},${t.category},${t.totalAmount},${t.myShare},${t.date},"${splitSummary}",${t.borrowedFrom||''},"${cleanNote}"\n`;
+        csv += `${t.id},${t.type},${t.category},${t.totalAmount},${t.myShare},${formatDateToStandard(t.date)},"${splitSummary}",${t.borrowedFrom||''},"${cleanNote}"\n`;
       });
       return csv;
     }
@@ -595,7 +607,6 @@
       link.click();
     }
 
-    // Helper to safely split CSV line accounting for quotes
     function parseCSVLine(text) {
       const result = [];
       let cur = '';
@@ -620,7 +631,6 @@
       return result;
     }
 
-    // Robust CSV Parsing to ensure 'Note' is strictly column 8 and 'BorrowedFrom' is column 7
     function parseAndLoadCSV(csvText) {
       if (!csvText || !csvText.trim()) { transactions = []; saveAndRender(false); return; }
       const lines = csvText.trim().split('\n');
@@ -636,7 +646,7 @@
           const category = cols[2].replace(/^"|"$/g, '').trim();
           const totalAmount = parseFloat(cols[3]) || 0;
           const myShare = parseFloat(cols[4]) || 0;
-          const date = cols[5].replace(/^"|"$/g, '').trim();
+          const date = formatDateToStandard(cols[5].replace(/^"|"$/g, '').trim());
 
           let splits = [];
           if (cols[6]) {
@@ -649,7 +659,6 @@
             }
           }
 
-          // Strictly Column 7 = Borrowed From, Column 8 = Note
           const borrowedFrom = (cols[7] && cols[7].replace(/^"|"$/g, '').trim()) || null;
           const note = (cols[8] && cols[8].replace(/^"|"$/g, '').trim()) || '';
 
@@ -775,7 +784,7 @@
       const expandBtnContainer = document.getElementById('logs-expand-container');
       const toggleBtn = document.getElementById('logs-toggle-btn');
 
-      let filteredTxs = selectedGridDate ? transactions.filter(t => t.date === selectedGridDate) : transactions;
+      let filteredTxs = selectedGridDate ? transactions.filter(t => formatDateToStandard(t.date) === formatDateToStandard(selectedGridDate)) : transactions;
       const totalCount = filteredTxs.length;
 
       if (totalCount === 0) {
@@ -878,7 +887,9 @@
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayTxs = transactions.filter(t => t.date === dateStr);
+        
+        // Flexible date comparison to handle padded/non-padded CSV date entries
+        const dayTxs = transactions.filter(t => formatDateToStandard(t.date) === dateStr);
 
         const inc = dayTxs.filter(t => t.type === 'income').reduce((a, b) => a + b.myShare, 0);
         const exp = dayTxs.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
