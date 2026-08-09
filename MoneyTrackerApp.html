@@ -266,6 +266,23 @@
     let accessToken = localStorage.getItem('gdrive_access_token') || null;
     let driveFileId = localStorage.getItem('gdrive_file_id') || null;
 
+    // Helper to format any date variation into strict YYYY-MM-DD
+    function normalizeDate(rawDate) {
+      if (!rawDate) return new Date().toISOString().split('T')[0];
+      const clean = rawDate.replace(/^"|"$/g, '').trim().replace(/\//g, '-');
+      const parts = clean.split('-');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-M-D -> YYYY-MM-DD
+          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        } else if (parts[2].length === 4) {
+          // D-M-YYYY -> YYYY-MM-DD
+          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+      return clean;
+    }
+
     function populateCategories() {
       const select = document.getElementById('category');
       select.innerHTML = '';
@@ -321,7 +338,7 @@
     async function syncWithGoogleDrive() {
       if (!accessToken) return;
       try {
-        const keyParam = GOOGLE_API_KEY && !GOOGLE_API_KEY.includes("YOUR_API_KEY") ? `&key=${GOOGLE_API_KEY}` : '';
+        const keyParam = GOOGLE_API_KEY ? `&key=${GOOGLE_API_KEY}` : '';
 
         if (!driveFileId) {
           const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false${keyParam}`, {
@@ -353,7 +370,7 @@
     async function uploadToGoogleDrive(csvContent) {
       if (!accessToken) return;
       try {
-        const keyParam = GOOGLE_API_KEY && !GOOGLE_API_KEY.includes("YOUR_API_KEY") ? `?key=${GOOGLE_API_KEY}` : '';
+        const keyParam = GOOGLE_API_KEY ? `?key=${GOOGLE_API_KEY}` : '';
 
         if (!driveFileId) {
           const metadata = { name: DRIVE_FILE_NAME, mimeType: 'text/csv' };
@@ -470,23 +487,11 @@
       container.appendChild(row);
     }
 
-    function formatDateToStandard(dateStr) {
-      if (!dateStr) return '';
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        const y = parts[0];
-        const m = String(parts[1]).padStart(2, '0');
-        const d = String(parts[2]).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      }
-      return dateStr;
-    }
-
     function addTransaction(e) {
       e.preventDefault();
       const totalAmount = parseFloat(document.getElementById('amount').value);
       const category = document.getElementById('category').value;
-      const date = formatDateToStandard(document.getElementById('date').value);
+      const date = normalizeDate(document.getElementById('date').value);
       const note = document.getElementById('note').value.trim();
       const isSplit = document.getElementById('is-split').checked && currentType === 'expense';
 
@@ -594,7 +599,7 @@
       transactions.forEach(t => {
         const splitSummary = t.splits ? t.splits.map(s => `${s.name}:${s.amount}`).join(';') : '';
         const cleanNote = t.note ? t.note.replace(/"/g, '""') : '';
-        csv += `${t.id},${t.type},${t.category},${t.totalAmount},${t.myShare},${formatDateToStandard(t.date)},"${splitSummary}",${t.borrowedFrom||''},"${cleanNote}"\n`;
+        csv += `${t.id},${t.type},${t.category},${t.totalAmount},${t.myShare},${t.date},"${splitSummary}",${t.borrowedFrom||''},"${cleanNote}"\n`;
       });
       return csv;
     }
@@ -646,7 +651,9 @@
           const category = cols[2].replace(/^"|"$/g, '').trim();
           const totalAmount = parseFloat(cols[3]) || 0;
           const myShare = parseFloat(cols[4]) || 0;
-          const date = formatDateToStandard(cols[5].replace(/^"|"$/g, '').trim());
+          
+          // Apply date normalization automatically
+          const date = normalizeDate(cols[5]);
 
           let splits = [];
           if (cols[6]) {
@@ -764,9 +771,9 @@
     }
 
     function filterByDate(dateStr) {
-      selectedGridDate = dateStr;
+      selectedGridDate = normalizeDate(dateStr);
       document.getElementById('active-date-filter').classList.remove('hidden');
-      document.getElementById('filter-date-label').textContent = `Showing: ${dateStr}`;
+      document.getElementById('filter-date-label').textContent = `Showing: ${selectedGridDate}`;
       renderList();
       renderCalendar();
     }
@@ -784,7 +791,7 @@
       const expandBtnContainer = document.getElementById('logs-expand-container');
       const toggleBtn = document.getElementById('logs-toggle-btn');
 
-      let filteredTxs = selectedGridDate ? transactions.filter(t => formatDateToStandard(t.date) === formatDateToStandard(selectedGridDate)) : transactions;
+      let filteredTxs = selectedGridDate ? transactions.filter(t => t.date === selectedGridDate) : transactions;
       const totalCount = filteredTxs.length;
 
       if (totalCount === 0) {
@@ -887,9 +894,7 @@
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
-        // Flexible date comparison to handle padded/non-padded CSV date entries
-        const dayTxs = transactions.filter(t => formatDateToStandard(t.date) === dateStr);
+        const dayTxs = transactions.filter(t => t.date === dateStr);
 
         const inc = dayTxs.filter(t => t.type === 'income').reduce((a, b) => a + b.myShare, 0);
         const exp = dayTxs.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
