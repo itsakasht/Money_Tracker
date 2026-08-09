@@ -68,7 +68,7 @@
           <div>
             <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Category</label>
             <select id="category" onchange="handleCategoryChange()" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none">
-              <!-- Dynamically Populated Based on Type -->
+              <!-- Dynamically Populated -->
             </select>
           </div>
         </div>
@@ -170,20 +170,28 @@
       <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
     </section>
 
-    <!-- Recent Logs -->
+    <!-- Recent Logs (With Dynamic Count & Pagination) -->
     <section class="space-y-3">
       <div class="flex justify-between items-center px-1">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Logs</h3>
+        <h3 id="recent-logs-header" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Logs</h3>
         <div id="active-date-filter" class="hidden">
           <button onclick="clearDateFilter()" class="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full font-semibold">
             <span id="filter-date-label"></span> ✕
           </button>
         </div>
       </div>
+      
       <div id="tx-list" class="space-y-2"></div>
+
+      <!-- Expand / Collapse Toggle Button -->
+      <div id="logs-expand-container" class="hidden text-center pt-1">
+        <button id="logs-toggle-btn" onclick="toggleLogsExpand()" class="text-xs font-bold text-indigo-500 hover:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl transition-all">
+          Show All
+        </button>
+      </div>
     </section>
 
-    <!-- Google Drive Cloud Sync Card (Positioned at Bottom) -->
+    <!-- Google Drive Cloud Sync Card -->
     <section class="bg-indigo-900/10 border border-indigo-500/30 rounded-3xl p-4 space-y-3 shadow-sm">
       <div class="flex justify-between items-center">
         <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider">☁️ Google Drive Cloud Sync</h3>
@@ -207,16 +215,25 @@
 
   </main>
 
+  <!-- Floating Toast Notification for Undo Deletion -->
+  <div id="undo-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden w-[90%] max-w-md bg-slate-900/95 dark:bg-slate-800/95 border border-slate-700 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between transition-all duration-300 transform translate-y-4">
+    <div class="flex items-center gap-2">
+      <span class="text-rose-400 font-bold text-xs">🗑️ Log deleted</span>
+    </div>
+    <button onclick="undoDeleteTransaction()" class="text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl transition-all shadow-md active:scale-95">
+      ↩ Undo
+    </button>
+  </div>
+
   <script>
     // =================================================================
-    // ⚙️ REPLACE WITH YOUR CREDENTIALS FROM GOOGLE CLOUD CONSOLE
+    // ⚙️ CREDENTIALS
     // =================================================================
     const GOOGLE_CLIENT_ID = "75795599589-fqmlr74m2rostp84lu0sjmr59s6e2fqs.apps.googleusercontent.com";
     const GOOGLE_API_KEY = "AIzaSyBdMTpv9dD0Fp2W_-XRQPhy07k3BPA8Oo0";
     const DRIVE_FILE_NAME = "money_tracker.csv";
     const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom,Note\n";
 
-    // Category Definitions
     const EXPENSE_CATEGORIES = [
       { value: "Food", label: "🍔 Food" },
       { value: "Entertainment", label: "🎬 Entertainment" },
@@ -241,6 +258,11 @@
     let currentType = 'expense';
     let pieChartInstance = null;
     let selectedGridDate = null;
+
+    // Pagination & Undo Stack State
+    let isLogsExpanded = false;
+    let lastDeletedStack = [];
+    let undoToastTimer = null;
 
     let tokenClient = null;
     let accessToken = localStorage.getItem('gdrive_access_token') || null;
@@ -500,14 +522,60 @@
       setType('expense');
     }
 
+    // Delete with Soft-Delete & Undo Stack Trigger
     function deleteTransaction(id) {
-      transactions = transactions.filter(tx => tx.id !== id);
-      saveAndRender();
+      const idx = transactions.findIndex(tx => tx.id === id);
+      if (idx !== -1) {
+        const [deletedItem] = transactions.splice(idx, 1);
+        lastDeletedStack.push({ item: deletedItem, originalIndex: idx });
+        
+        showUndoToast();
+        saveAndRender();
+      }
+    }
+
+    function showUndoToast() {
+      const toast = document.getElementById('undo-toast');
+      toast.classList.remove('hidden', 'translate-y-4');
+      toast.classList.add('translate-y-0');
+
+      if (undoToastTimer) clearTimeout(undoToastTimer);
+      undoToastTimer = setTimeout(() => {
+        hideUndoToast();
+      }, 5000);
+    }
+
+    function hideUndoToast() {
+      const toast = document.getElementById('undo-toast');
+      toast.classList.add('translate-y-4');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 300);
+    }
+
+    function undoDeleteTransaction() {
+      if (lastDeletedStack.length > 0) {
+        const { item, originalIndex } = lastDeletedStack.pop();
+        if (originalIndex !== undefined && originalIndex <= transactions.length) {
+          transactions.splice(originalIndex, 0, item);
+        } else {
+          transactions.unshift(item);
+        }
+        hideUndoToast();
+        saveAndRender();
+      }
+    }
+
+    function toggleLogsExpand() {
+      isLogsExpanded = !isLogsExpanded;
+      renderList();
     }
 
     function clearData() {
       if (confirm("Clear all transactions?")) {
         transactions = [];
+        lastDeletedStack = [];
+        hideUndoToast();
         saveAndRender();
       }
     }
@@ -675,11 +743,37 @@
 
     function renderList() {
       const listContainer = document.getElementById('tx-list');
-      let displayTxs = selectedGridDate ? transactions.filter(t => t.date === selectedGridDate) : transactions;
+      const headerEl = document.getElementById('recent-logs-header');
+      const expandBtnContainer = document.getElementById('logs-expand-container');
+      const toggleBtn = document.getElementById('logs-toggle-btn');
 
-      if (displayTxs.length === 0) {
+      let filteredTxs = selectedGridDate ? transactions.filter(t => t.date === selectedGridDate) : transactions;
+      const totalCount = filteredTxs.length;
+
+      if (totalCount === 0) {
+        headerEl.textContent = "Recent Logs (0)";
         listContainer.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">No logs recorded.</p>`;
+        expandBtnContainer.classList.add('hidden');
         return;
+      }
+
+      // Pagination Limit logic (Default 10)
+      const limit = 10;
+      let displayTxs = filteredTxs;
+
+      if (totalCount > limit) {
+        expandBtnContainer.classList.remove('hidden');
+        if (!isLogsExpanded) {
+          displayTxs = filteredTxs.slice(0, limit);
+          toggleBtn.textContent = `Show All (${totalCount})`;
+          headerEl.textContent = `Recent Logs (Showing ${displayTxs.length} of ${totalCount})`;
+        } else {
+          toggleBtn.textContent = `Collapse to ${limit}`;
+          headerEl.textContent = `Recent Logs (Showing ${totalCount} of ${totalCount})`;
+        }
+      } else {
+        expandBtnContainer.classList.add('hidden');
+        headerEl.textContent = `Recent Logs (${totalCount})`;
       }
 
       listContainer.innerHTML = displayTxs.map(tx => {
@@ -712,7 +806,7 @@
               <span class="text-sm font-bold ${isIncome ? 'text-emerald-500' : 'text-slate-800 dark:text-slate-200'}">
                 ${isIncome ? '+' : '-'}₹${tx.totalAmount.toFixed(2)}
               </span>
-              <button onclick="deleteTransaction(${tx.id})" class="text-slate-400 hover:text-rose-500 text-xs p-1">✕</button>
+              <button onclick="deleteTransaction(${tx.id})" class="text-slate-400 hover:text-rose-500 text-xs p-1 transition-colors">✕</button>
             </div>
           </div>
         `;
