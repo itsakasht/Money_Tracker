@@ -4,70 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#4f46e5">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Money Tracker</title>
 
   <!-- SVG App Logo / Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>">
 
-  <!-- Embedded Web App Manifest for PWABuilder -->
-  <script>
-    const manifest = {
-      "name": "Money Tracker",
-      "short_name": "Tracker",
-      "start_url": "./index.html",
-      "display": "standalone",
-      "background_color": "#090d16",
-      "theme_color": "#4f46e5",
-      "orientation": "portrait",
-      "icons": [
-        {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>",
-          "sizes": "512x512",
-          "type": "image/svg+xml",
-          "purpose": "any maskable"
-        }
-      ]
-    };
-    const stringManifest = JSON.stringify(manifest);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    const link = document.createElement('link');
-    link.rel = 'manifest';
-    link.href = manifestURL;
-    document.getElementsByTagName('head')[0].appendChild(link);
-  </script>
-
+  <!-- Google Identity Services Library -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-          }
-        }
-      }
+      theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
     }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { -webkit-tap-highlight-color: transparent; }
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      cursor: pointer;
-      filter: invert(0.6);
-    }
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(0.6); }
   </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex justify-center pb-24 transition-colors duration-300 font-sans">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex justify-center pb-24 font-sans">
 
   <main class="w-full max-w-md p-4 space-y-5">
     
-    <!-- Header with Custom App Logo Icon -->
+    <!-- Header -->
     <header class="flex justify-between items-center pt-2">
       <div class="flex items-center gap-2.5">
         <div class="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-600/30">
@@ -75,78 +36,76 @@
         </div>
         <div>
           <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Money Tracker</h1>
-          <p id="file-status-sub" class="text-[11px] text-slate-400 font-medium">Local CSV Database</p>
+          <p id="drive-status-label" class="text-[11px] text-slate-400 font-medium">Local & Cloud Ledger</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-700 transition-all">
+        <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 flex items-center justify-center">
           <span id="theme-icon" class="text-sm">🌙</span>
         </button>
-        <button onclick="clearData()" class="text-xs text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-2 rounded-xl font-medium transition-all">Reset</button>
+        <button onclick="clearData()" class="text-xs text-rose-500 bg-rose-500/10 px-3 py-2 rounded-xl font-medium">Reset</button>
       </div>
     </header>
 
-    <!-- Add New Entry Form (Top) -->
+    <!-- 1. Add New Entry Form (Top) -->
     <section class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
       <div class="flex justify-between items-center">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Add New Entry</h3>
-        <span id="db-status-pill" class="text-[10px] bg-slate-500/10 text-slate-400 px-2.5 py-0.5 rounded-full font-semibold">Local Storage</span>
       </div>
 
       <form id="tx-form" onsubmit="addTransaction(event)" class="space-y-4">
+        <!-- Expense / Income Switcher -->
         <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl">
-          <button type="button" id="btn-expense" onclick="setType('expense')" class="py-2 text-xs font-semibold rounded-xl transition-all bg-rose-500 text-white shadow-sm">Expense</button>
-          <button type="button" id="btn-income" onclick="setType('income')" class="py-2 text-xs font-semibold rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">Income</button>
+          <button type="button" id="btn-expense" onclick="setType('expense')" class="py-2 text-xs font-semibold rounded-xl bg-rose-500 text-white shadow-sm">Expense</button>
+          <button type="button" id="btn-income" onclick="setType('income')" class="py-2 text-xs font-semibold rounded-xl text-slate-400">Income</button>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Amount (₹)</label>
-            <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all">
+            <input type="number" id="amount" step="0.01" min="0.01" placeholder="0.00" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none">
           </div>
           <div>
             <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Category</label>
-            <select id="category" onchange="handleCategoryChange()" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all">
-              <option value="Food">🍔 Food</option>
-              <option value="Travel">🚗 Travel</option>
-              <option value="Entertainment">🎬 Entertainment</option>
-              <option value="Clothes">👕 Clothes</option>
-              <option value="People">👥 People / Loan</option>
-              <option value="Income">💰 Income</option>
-              <option value="Other">📦 Other</option>
+            <select id="category" onchange="handleCategoryChange()" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none">
+              <!-- Dynamically Populated Based on Type -->
             </select>
           </div>
         </div>
 
+        <!-- Conditional Loan Settings -->
         <div id="people-options" class="hidden space-y-3 p-3.5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
-          <label class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider block">Loan / Repayment Action</label>
+          <label class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider block">Loan Action</label>
           <div class="grid grid-cols-2 gap-2 text-xs font-medium">
             <label class="flex items-center gap-2 cursor-pointer bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
-              <input type="radio" name="people-type" value="lent" checked class="text-indigo-600 focus:ring-0">
+              <input type="radio" name="people-type" value="lent" checked class="text-indigo-600">
               <span>I Paid / Lent</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
-              <input type="radio" name="people-type" value="borrowed" class="text-indigo-600 focus:ring-0">
+              <input type="radio" name="people-type" value="borrowed" class="text-indigo-600">
               <span>They Paid / Borrowed</span>
             </label>
           </div>
           <div>
             <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Person's Name</label>
-            <input type="text" id="person-name" placeholder="e.g. Rahul" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+            <input type="text" id="person-name" placeholder="e.g. Rahul" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-white text-xs">
           </div>
         </div>
 
         <div>
           <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Select Date</label>
-          <input type="date" id="date" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer">
+          <input type="date" id="date" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 text-slate-900 dark:text-white text-sm cursor-pointer">
         </div>
 
+        <div>
+          <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Note / Remark (Optional)</label>
+          <input type="text" id="note" placeholder="e.g. Dinner at Taj, Uber trip, Salary" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2 text-slate-900 dark:text-white text-xs focus:outline-none">
+        </div>
+
+        <!-- Splitwise Toggle Switch -->
         <div id="split-toggle-container" class="pt-1 flex items-center justify-between">
-          <span class="text-xs text-slate-700 dark:text-slate-300 font-semibold">Split this bill with friends</span>
-          <label for="is-split" class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="is-split" onchange="toggleSplitContainer()" class="sr-only peer">
-            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-indigo-600"></div>
-          </label>
+          <span class="text-xs text-slate-700 dark:text-slate-300 font-semibold">Split bill with friends</span>
+          <input type="checkbox" id="is-split" onchange="toggleSplitContainer()" class="w-4 h-4 rounded text-indigo-600">
         </div>
 
         <div id="split-section" class="hidden space-y-3 p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -157,7 +116,7 @@
           <div id="friends-rows" class="space-y-2"></div>
         </div>
 
-        <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-2xl text-sm transition-all text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98]">
+        <button type="submit" class="w-full py-3.5 bg-indigo-600 font-bold rounded-2xl text-sm text-white shadow-lg shadow-indigo-600/25">
           Save Transaction
         </button>
       </form>
@@ -165,36 +124,32 @@
 
     <!-- Overview Stats -->
     <section class="grid grid-cols-3 gap-2">
-      <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl shadow-sm text-center">
-        <span class="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Income</span>
-        <p id="total-income" class="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">₹0.00</p>
+      <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl text-center">
+        <span class="text-[10px] text-emerald-500 uppercase block font-semibold">Income</span>
+        <p id="total-income" class="text-xs font-bold mt-0.5">₹0.00</p>
       </div>
-      <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl shadow-sm text-center">
-        <span class="text-[10px] font-medium text-rose-500 dark:text-rose-400 uppercase tracking-wider block">Expense</span>
-        <p id="total-expense" class="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">₹0.00</p>
+      <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl text-center">
+        <span class="text-[10px] text-rose-500 uppercase block font-semibold">Expense</span>
+        <p id="total-expense" class="text-xs font-bold mt-0.5">₹0.00</p>
       </div>
-      <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl shadow-sm text-center">
-        <span class="text-[10px] font-medium text-amber-500 dark:text-amber-400 uppercase tracking-wider block">Net</span>
-        <p id="total-balance" class="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">₹0.00</p>
+      <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl text-center">
+        <span class="text-[10px] text-amber-500 uppercase block font-semibold">Net</span>
+        <p id="total-balance" class="text-xs font-bold mt-0.5">₹0.00</p>
       </div>
     </section>
 
-    <!-- People Ledger & Search Section -->
+    <!-- People Ledger -->
     <section class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 space-y-3 shadow-sm">
       <div class="flex justify-between items-center">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">👥 People Ledger</h3>
         <span id="people-count-badge" class="text-[10px] text-slate-400 font-semibold">0 active</span>
       </div>
-
-      <div class="relative">
-        <input type="text" id="person-search" oninput="renderPeopleLedger()" placeholder="🔍 Search person's name..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
-      </div>
-
+      <input type="text" id="person-search" oninput="renderPeopleLedger()" placeholder="🔍 Search person..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs">
       <div id="people-balances" class="space-y-3"></div>
     </section>
 
-    <!-- Expense Breakdown Chart -->
-    <section class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 space-y-3 shadow-sm">
+    <!-- Category Breakdown Chart -->
+    <section class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 space-y-3">
       <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Category Breakdown</h3>
       <div class="relative w-full h-44 flex justify-center items-center">
         <canvas id="category-chart"></canvas>
@@ -202,41 +157,25 @@
     </section>
 
     <!-- Daily Activity Grid -->
-    <section class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 space-y-3 shadow-sm">
-      <div class="flex justify-between items-center flex-wrap gap-2">
+    <section class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 space-y-3">
+      <div class="flex justify-between items-center gap-2">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Activity Grid</h3>
-        
         <div class="flex items-center gap-1.5">
-          <select id="grid-month-select" onchange="renderCalendar()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none font-medium">
-            <option value="0">Jan</option>
-            <option value="1">Feb</option>
-            <option value="2">Mar</option>
-            <option value="3">Apr</option>
-            <option value="4">May</option>
-            <option value="5">Jun</option>
-            <option value="6">Jul</option>
-            <option value="7">Aug</option>
-            <option value="8">Sep</option>
-            <option value="9">Oct</option>
-            <option value="10">Nov</option>
-            <option value="11">Dec</option>
+          <select id="grid-month-select" onchange="renderCalendar()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1 text-xs">
+            <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
           </select>
-
-          <select id="grid-year-select" onchange="renderCalendar()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none font-medium"></select>
+          <select id="grid-year-select" onchange="renderCalendar()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1 text-xs"></select>
         </div>
       </div>
-
-      <p class="text-[10px] text-slate-400 italic">Tap any date below to filter logs for that day.</p>
       <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
     </section>
 
-    <!-- Recent Activity List -->
+    <!-- Recent Logs -->
     <section class="space-y-3">
       <div class="flex justify-between items-center px-1">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Logs</h3>
-        
         <div id="active-date-filter" class="hidden">
-          <button onclick="clearDateFilter()" class="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 hover:bg-indigo-500/20 transition-all">
+          <button onclick="clearDateFilter()" class="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full font-semibold">
             <span id="filter-date-label"></span> ✕
           </button>
         </div>
@@ -244,36 +183,180 @@
       <div id="tx-list" class="space-y-2"></div>
     </section>
 
-    <!-- Simplified File Database Management (Bottom Only) -->
-    <section class="bg-indigo-900/10 border border-indigo-500/20 dark:border-indigo-500/30 rounded-3xl p-4 space-y-3 shadow-sm">
+    <!-- Google Drive Cloud Sync Card (Positioned at Bottom) -->
+    <section class="bg-indigo-900/10 border border-indigo-500/30 rounded-3xl p-4 space-y-3 shadow-sm">
       <div class="flex justify-between items-center">
-        <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider">📁 Sync Database (CSV)</h3>
-        <span id="file-name-label" class="text-[10px] text-slate-400 italic">No CSV linked</span>
+        <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider">☁️ Google Drive Cloud Sync</h3>
+        <span id="sync-badge" class="text-[10px] bg-slate-500/10 text-slate-400 px-2.5 py-0.5 rounded-full font-semibold">Not Connected</span>
       </div>
+      
+      <p class="text-[11px] text-slate-400 leading-snug">
+        Connect Google Drive to automatically sync your <code>money_tracker.csv</code> database across laptop and phone.
+      </p>
 
       <div class="grid grid-cols-2 gap-2 pt-1">
-        <button onclick="selectOrSyncCSV()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5">
-          <span>🔗</span> Select / Sync CSV
+        <button id="gdrive-auth-btn" onclick="handleAuthClick()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1">
+          <span>🔑</span> <span id="auth-btn-text">Connect Drive</span>
         </button>
 
-        <button onclick="exportCSV()" class="w-full py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border border-emerald-500/20 font-bold text-xs rounded-xl transition-all text-center">
-          📥 Download CSV
+        <button onclick="exportCSV()" class="w-full py-2.5 bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 font-bold text-xs rounded-xl text-center">
+          📥 Backup CSV
         </button>
       </div>
-
-      <input type="file" id="mobile-csv-picker" accept=".csv" onchange="importMobileCSVFile(event)" class="hidden">
     </section>
 
   </main>
 
   <script>
+    // =================================================================
+    // ⚙️ PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+    // =================================================================
+    const GOOGLE_CLIENT_ID = "75795599589-fqmlr74m2rostp84lu0sjmr59s6e2fqs.apps.googleusercontent.com";
+    const DRIVE_FILE_NAME = "money_tracker.csv";
+    const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom,Note\n";
+
+    // Category Definitions
+    const EXPENSE_CATEGORIES = [
+      { value: "Food", label: "🍔 Food" },
+      { value: "Entertainment", label: "🎬 Entertainment" },
+      { value: "Health", label: "🩺 Health" },
+      { value: "Clothes", label: "👕 Clothes" },
+      { value: "Transport", label: "🚗 Transport" },
+      { value: "Groceries", label: "🛒 Groceries" },
+      { value: "Rent", label: "🏠 Rent" },
+      { value: "Bills", label: "📄 Bills" },
+      { value: "People", label: "👥 People / Loan" },
+      { value: "Other", label: "📦 Other" }
+    ];
+
+    const INCOME_CATEGORIES = [
+      { value: "Income", label: "💰 Income" },
+      { value: "Deposit", label: "🏦 Deposit" },
+      { value: "People", label: "👥 People / Loan" },
+      { value: "Other", label: "📦 Other" }
+    ];
+
     let transactions = [];
     let currentType = 'expense';
     let pieChartInstance = null;
-    let fileHandle = null;
     let selectedGridDate = null;
 
-    const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom\n";
+    let tokenClient = null;
+    let accessToken = localStorage.getItem('gdrive_access_token') || null;
+    let driveFileId = localStorage.getItem('gdrive_file_id') || null;
+
+    function populateCategories() {
+      const select = document.getElementById('category');
+      select.innerHTML = '';
+      const list = currentType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+      list.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.value;
+        opt.textContent = cat.label;
+        select.appendChild(opt);
+      });
+      handleCategoryChange();
+    }
+
+    function initGoogleAuth() {
+      if (typeof google === 'undefined' || GOOGLE_CLIENT_ID.includes("YOUR_CLIENT_ID_HERE")) return;
+      
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: async (resp) => {
+          if (resp.error) return alert("Google Login Error: " + resp.error);
+          accessToken = resp.access_token;
+          localStorage.setItem('gdrive_access_token', accessToken);
+          updateDriveUI(true);
+          await syncWithGoogleDrive();
+        },
+      });
+
+      if (accessToken) {
+        updateDriveUI(true);
+        syncWithGoogleDrive();
+      }
+    }
+
+    function handleAuthClick() {
+      if (!tokenClient) return alert("Please add your Google Client ID into index.html!");
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+
+    function updateDriveUI(connected) {
+      const badge = document.getElementById('sync-badge');
+      const label = document.getElementById('drive-status-label');
+      const btnText = document.getElementById('auth-btn-text');
+
+      if (connected) {
+        badge.textContent = "Drive Connected";
+        badge.className = "text-[10px] bg-emerald-500/10 text-emerald-500 px-2.5 py-0.5 rounded-full font-semibold";
+        label.textContent = "Synced with Drive";
+        btnText.textContent = "Re-Sync Drive";
+      }
+    }
+
+    async function syncWithGoogleDrive() {
+      if (!accessToken) return;
+      try {
+        if (!driveFileId) {
+          const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          const searchData = await searchRes.json();
+          if (searchData.files && searchData.files.length > 0) {
+            driveFileId = searchData.files[0].id;
+            localStorage.setItem('gdrive_file_id', driveFileId);
+          }
+        }
+
+        if (driveFileId) {
+          const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          if (contentRes.ok) {
+            const csvText = await contentRes.text();
+            parseAndLoadCSV(csvText);
+          }
+        } else {
+          await uploadToGoogleDrive(generateCSVString());
+        }
+      } catch (err) {
+        console.error("Drive sync error:", err);
+      }
+    }
+
+    async function uploadToGoogleDrive(csvContent) {
+      if (!accessToken) return;
+      try {
+        if (!driveFileId) {
+          const metadata = { name: DRIVE_FILE_NAME, mimeType: 'text/csv' };
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+          form.append('file', new Blob([csvContent], { type: 'text/csv' }));
+
+          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: form
+          });
+          const data = await res.json();
+          if (data.id) {
+            driveFileId = data.id;
+            localStorage.setItem('gdrive_file_id', driveFileId);
+          }
+        } else {
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'text/csv' },
+            body: csvContent
+          });
+        }
+      } catch (err) {
+        console.error("Drive upload failed:", err);
+      }
+    }
 
     function initTheme() {
       const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -294,8 +377,7 @@
       yearSelect.innerHTML = '';
       for (let y = currentYear - 5; y <= currentYear + 5; y++) {
         const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = y;
+        opt.value = y; opt.textContent = y;
         if (y === currentYear) opt.selected = true;
         yearSelect.appendChild(opt);
       }
@@ -311,17 +393,17 @@
       const splitToggle = document.getElementById('split-toggle-container');
 
       if (type === 'expense') {
-        expBtn.className = "py-2 text-xs font-semibold rounded-xl transition-all bg-rose-500 text-white shadow-sm";
-        incBtn.className = "py-2 text-xs font-semibold rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200";
+        expBtn.className = "py-2 text-xs font-semibold rounded-xl bg-rose-500 text-white shadow-sm";
+        incBtn.className = "py-2 text-xs font-semibold rounded-xl text-slate-400";
         splitToggle.classList.remove('hidden');
       } else {
-        incBtn.className = "py-2 text-xs font-semibold rounded-xl transition-all bg-emerald-500 text-white shadow-sm";
-        expBtn.className = "py-2 text-xs font-semibold rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200";
+        incBtn.className = "py-2 text-xs font-semibold rounded-xl bg-emerald-500 text-white shadow-sm";
+        expBtn.className = "py-2 text-xs font-semibold rounded-xl text-slate-400";
         splitToggle.classList.add('hidden');
         document.getElementById('is-split').checked = false;
         toggleSplitContainer();
       }
-      handleCategoryChange();
+      populateCategories();
     }
 
     function handleCategoryChange() {
@@ -345,9 +427,7 @@
       const section = document.getElementById('split-section');
       if (isChecked) {
         section.classList.remove('hidden');
-        if (document.getElementById('friends-rows').children.length === 0) {
-          addFriendRow();
-        }
+        if (document.getElementById('friends-rows').children.length === 0) addFriendRow();
       } else {
         section.classList.add('hidden');
       }
@@ -370,6 +450,7 @@
       const totalAmount = parseFloat(document.getElementById('amount').value);
       const category = document.getElementById('category').value;
       const date = document.getElementById('date').value;
+      const note = document.getElementById('note').value.trim();
       const isSplit = document.getElementById('is-split').checked && currentType === 'expense';
 
       let splits = [];
@@ -381,11 +462,7 @@
       if (category === 'People') {
         const pType = document.querySelector('input[name="people-type"]:checked').value;
         const pName = document.getElementById('person-name').value.trim();
-
-        if (!pName) {
-          alert("Please specify the person's name.");
-          return;
-        }
+        if (!pName) return alert("Please enter person name.");
 
         if (pType === 'lent') {
           effectiveType = 'expense';
@@ -397,8 +474,7 @@
           borrowedFrom = pName;
         }
       } else if (isSplit) {
-        const rows = document.querySelectorAll('.friend-row');
-        rows.forEach(r => {
+        document.querySelectorAll('.friend-row').forEach(r => {
           const name = r.querySelector('.friend-name').value.trim();
           const amt = parseFloat(r.querySelector('.friend-amount').value) || 0;
           if (name && amt > 0) {
@@ -409,25 +485,13 @@
         myShare = Math.max(0, totalAmount - friendTotal);
       }
 
-      const newTx = {
-        id: Date.now(),
-        type: effectiveType,
-        totalAmount,
-        myShare,
-        category,
-        date,
-        splits,
-        borrowedFrom
-      };
-
-      transactions.unshift(newTx);
+      transactions.unshift({ id: Date.now(), type: effectiveType, totalAmount, myShare, category, date, splits, borrowedFrom, note });
       saveAndRender();
 
       document.getElementById('tx-form').reset();
       document.getElementById('friends-rows').innerHTML = '';
       document.getElementById('date').valueAsDate = new Date();
       document.getElementById('is-split').checked = false;
-      handleCategoryChange();
       setType('expense');
     }
 
@@ -437,7 +501,7 @@
     }
 
     function clearData() {
-      if (confirm("Are you sure you want to clear all transactions?")) {
+      if (confirm("Clear all transactions?")) {
         transactions = [];
         saveAndRender();
       }
@@ -447,7 +511,8 @@
       let csv = CSV_HEADER;
       transactions.forEach(t => {
         const splitSummary = t.splits ? t.splits.map(s => `${s.name}:${s.amount}`).join(';') : '';
-        csv += `${t.id},${t.type},${t.category},${t.totalAmount},${t.myShare},${t.date},"${splitSummary}",${t.borrowedFrom||''}\n`;
+        const cleanNote = t.note ? t.note.replace(/"/g, '""') : '';
+        csv += `${t.id},${t.type},${t.category},${t.totalAmount},${t.myShare},${t.date},"${splitSummary}",${t.borrowedFrom||''},"${cleanNote}"\n`;
       });
       return csv;
     }
@@ -456,107 +521,14 @@
       const csv = generateCSVString();
       const link = document.createElement("a");
       link.href = encodeURI("data:text/csv;charset=utf-8," + csv);
-      link.download = `money_tracker.csv`;
+      link.download = DRIVE_FILE_NAME;
       link.click();
     }
 
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open("MoneyTrackerFileStore", 1);
-        req.onupgradeneeded = () => req.result.createObjectStore("handles");
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    async function saveHandleToIDB(handle) {
-      try {
-        const db = await openDB();
-        const tx = db.transaction("handles", "readwrite");
-        tx.objectStore("handles").put(handle, "active_csv_handle");
-      } catch (err) {
-        console.warn("IndexedDB handle save error", err);
-      }
-    }
-
-    async function loadHandleFromIDB() {
-      try {
-        const db = await openDB();
-        const tx = db.transaction("handles", "readonly");
-        return new Promise((resolve) => {
-          const req = tx.objectStore("handles").get("active_csv_handle");
-          req.onsuccess = () => resolve(req.result || null);
-          req.onerror = () => resolve(null);
-        });
-      } catch (err) {
-        return null;
-      }
-    }
-
-    async function selectOrSyncCSV() {
-      if ('showOpenFilePicker' in window) {
-        try {
-          const [handle] = await window.showOpenFilePicker({
-            types: [{ description: 'CSV Database', accept: { 'text/csv': ['.csv'] } }],
-            multiple: false
-          });
-          fileHandle = handle;
-          await saveHandleToIDB(handle);
-          updateFileStatusUI(handle.name);
-
-          const file = await fileHandle.getFile();
-          const content = await file.text();
-          parseAndLoadCSV(content);
-        } catch (err) {
-          console.log("File picker closed", err);
-        }
-      } else {
-        document.getElementById('mobile-csv-picker').click();
-      }
-    }
-
-    function importMobileCSVFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      updateFileStatusUI(file.name);
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        parseAndLoadCSV(evt.target.result);
-      };
-      reader.readAsText(file);
-    }
-
-    function updateFileStatusUI(filename) {
-      document.getElementById('file-name-label').textContent = filename;
-      document.getElementById('file-status-sub').textContent = `Linked: ${filename}`;
-      document.getElementById('db-status-pill').textContent = "CSV Synced";
-      document.getElementById('db-status-pill').className = "text-[10px] bg-emerald-500/10 text-emerald-500 px-2.5 py-0.5 rounded-full font-semibold";
-    }
-
-    async function writeToDirectFile() {
-      if (!fileHandle) return;
-      try {
-        const writable = await fileHandle.createWritable();
-        await writable.write(generateCSVString());
-        await writable.close();
-      } catch (err) {
-        console.error("Auto-sync write error:", err);
-      }
-    }
-
     function parseAndLoadCSV(csvText) {
-      if (!csvText || !csvText.trim()) {
-        transactions = [];
-        saveAndRender();
-        return;
-      }
-
+      if (!csvText || !csvText.trim()) { transactions = []; saveAndRender(false); return; }
       const lines = csvText.trim().split('\n');
-      if (lines.length <= 1) {
-        transactions = [];
-        saveAndRender();
-        return;
-      }
+      if (lines.length <= 1) { transactions = []; saveAndRender(false); return; }
 
       const loaded = [];
       for (let i = 1; i < lines.length; i++) {
@@ -576,30 +548,29 @@
             if (rawSplits) {
               splits = rawSplits.split(';').map(item => {
                 const [name, rest] = item.split(':');
-                const amt = parseFloat(rest) || 0;
-                return { name, amount: amt };
+                return { name, amount: parseFloat(rest) || 0 };
               }).filter(s => s && s.name);
             }
           }
 
           const borrowedFrom = cols[7] ? cols[7].replace(/"/g, '').trim() : null;
-          loaded.push({ id, type, category, totalAmount, myShare, date, splits, borrowedFrom });
+          const note = cols[8] ? cols[8].replace(/"/g, '').trim() : '';
+
+          loaded.push({ id, type, category, totalAmount, myShare, date, splits, borrowedFrom, note });
         }
       }
-
       transactions = loaded;
       saveAndRender(false);
     }
 
-    function saveAndRender(shouldWriteToFile = true) {
+    function saveAndRender(syncDrive = true) {
       localStorage.setItem('transactions', JSON.stringify(transactions));
-      if (shouldWriteToFile) writeToDirectFile();
+      if (syncDrive && accessToken) uploadToGoogleDrive(generateCSVString());
 
       const income = transactions.filter(t => t.type === 'income').reduce((a, b) => a + b.myShare, 0);
       const expense = transactions.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
-      const balance = income - expense;
-
-      document.getElementById('total-balance').textContent = `₹${balance.toFixed(2)}`;
+      
+      document.getElementById('total-balance').textContent = `₹${(income - expense).toFixed(2)}`;
       document.getElementById('total-income').textContent = `₹${income.toFixed(2)}`;
       document.getElementById('total-expense').textContent = `₹${expense.toFixed(2)}`;
 
@@ -623,22 +594,19 @@
             const name = s.name.trim();
             personTotals[name] = (personTotals[name] || 0) + s.amount;
             if (!personHistory[name]) personHistory[name] = [];
-            personHistory[name].push({ date: t.date, desc: `${t.category} Split`, amount: s.amount, type: 'lent' });
+            personHistory[name].push({ date: t.date, desc: `${t.category} Split${t.note ? ` (${t.note})` : ''}`, amount: s.amount, type: 'lent' });
           });
         }
         if (t.borrowedFrom) {
           const name = t.borrowedFrom.trim();
           personTotals[name] = (personTotals[name] || 0) - t.totalAmount;
           if (!personHistory[name]) personHistory[name] = [];
-          personHistory[name].push({ date: t.date, desc: `Borrowed / Repaid`, amount: t.totalAmount, type: 'borrowed' });
+          personHistory[name].push({ date: t.date, desc: `Borrowed / Repaid${t.note ? ` (${t.note})` : ''}`, amount: t.totalAmount, type: 'borrowed' });
         }
       });
 
       let names = Object.keys(personTotals);
-      if (searchQuery) {
-        names = names.filter(n => n.toLowerCase().includes(searchQuery));
-      }
-
+      if (searchQuery) names = names.filter(n => n.toLowerCase().includes(searchQuery));
       badge.textContent = `${names.length} active`;
 
       if (names.length === 0) {
@@ -661,11 +629,10 @@
                   ${isBalanced ? 'Fully Settled (₹0.00)' : isOwed ? `Owes you ₹${net.toFixed(2)}` : `You owe ₹${Math.abs(net).toFixed(2)}`}
                 </p>
               </div>
-              <button onclick="togglePersonDetails('${name}')" class="text-[10px] text-indigo-500 bg-indigo-500/10 px-2 py-1 rounded-lg font-semibold hover:bg-indigo-500/20">
+              <button onclick="togglePersonDetails('${name}')" class="text-[10px] text-indigo-500 bg-indigo-500/10 px-2 py-1 rounded-lg font-semibold">
                 History (${history.length})
               </button>
             </div>
-
             <div id="history-${name}" class="hidden pt-2 border-t border-slate-200 dark:border-slate-800/60 space-y-1">
               ${history.map(h => `
                 <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
@@ -703,14 +670,10 @@
 
     function renderList() {
       const listContainer = document.getElementById('tx-list');
-      
-      let displayTxs = transactions;
-      if (selectedGridDate) {
-        displayTxs = transactions.filter(t => t.date === selectedGridDate);
-      }
+      let displayTxs = selectedGridDate ? transactions.filter(t => t.date === selectedGridDate) : transactions;
 
       if (displayTxs.length === 0) {
-        listContainer.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">${selectedGridDate ? `No transactions recorded on ${selectedGridDate}.` : 'No logs recorded yet.'}</p>`;
+        listContainer.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">No logs recorded.</p>`;
         return;
       }
 
@@ -727,17 +690,17 @@
           subDetail += ` • My share: ₹${tx.myShare}`;
         }
 
-        const splitTag = tx.splits && tx.splits.length > 0 && tx.category !== 'People'
-          ? `<span class="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded-md ml-1">Split</span>` 
-          : '';
+        if (tx.note) {
+          subDetail += ` • "${tx.note}"`;
+        }
 
         return `
-          <div class="flex justify-between items-center bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl shadow-sm">
+          <div class="flex justify-between items-center bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 p-3 rounded-2xl">
             <div class="flex items-center gap-3">
               ${arrow}
               <div>
-                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">${tx.category} ${splitTag}</p>
-                <p class="text-[11px] text-slate-400">${subDetail}</p>
+                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">${tx.category}</p>
+                <p class="text-[11px] text-slate-400 leading-tight">${subDetail}</p>
               </div>
             </div>
             <div class="flex items-center gap-2.5">
@@ -756,9 +719,7 @@
       const expenses = transactions.filter(t => t.type === 'expense' && t.myShare > 0);
       
       const categoryTotals = {};
-      expenses.forEach(t => {
-        categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.myShare;
-      });
+      expenses.forEach(t => { categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.myShare; });
 
       const labels = Object.keys(categoryTotals);
       const data = Object.values(categoryTotals);
@@ -770,25 +731,11 @@
         type: 'pie',
         data: {
           labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#eab308', '#64748b', '#10b981', '#f97316'],
-            borderWidth: 0
-          }]
+          datasets: [{ data: data, backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#eab308', '#64748b', '#10b981', '#f97316', '#06b6d4', '#8b5cf6'], borderWidth: 0 }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                boxWidth: 10,
-                color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b',
-                font: { size: 10 }
-              }
-            }
-          }
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { boxWidth: 10, color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b', font: { size: 10 } } } }
         }
       });
     }
@@ -797,12 +744,9 @@
       const calendarGrid = document.getElementById('calendar-grid');
       const month = parseInt(document.getElementById('grid-month-select').value);
       const year = parseInt(document.getElementById('grid-year-select').value);
-
       const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-      let gridHTML = weekDays.map(d => `<div class="text-[10px] font-bold text-slate-400 py-1">${d}</div>`).join('');
-
+      let gridHTML = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<div class="text-[10px] font-bold text-slate-400 py-1">${d}</div>`).join('');
       const firstDayIdx = new Date(year, month, 1).getDay();
       for (let i = 0; i < firstDayIdx; i++) gridHTML += `<div></div>`;
 
@@ -814,56 +758,32 @@
         const exp = dayTxs.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
 
         const isSelected = selectedGridDate === dateStr;
-        let bgClass = "bg-slate-100 dark:bg-slate-950";
-        if (isSelected) {
-          bgClass = "bg-indigo-600/30 border-2 border-indigo-500 shadow-md";
-        } else if (dayTxs.length > 0) {
-          bgClass = (inc - exp) >= 0 
-            ? "bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20" 
-            : "bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20";
-        } else {
-          bgClass += " hover:bg-slate-200 dark:hover:bg-slate-900";
-        }
+        let bgClass = isSelected ? "bg-indigo-600/30 border-2 border-indigo-500 shadow-md" : (dayTxs.length > 0 ? ((inc - exp) >= 0 ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-rose-500/10 border border-rose-500/30") : "bg-slate-100 dark:bg-slate-950");
 
         gridHTML += `
-          <div onclick="filterByDate('${dateStr}')" class="${bgClass} rounded-xl p-1 min-h-[42px] flex flex-col justify-between items-center text-[9px] cursor-pointer transition-all">
+          <div onclick="filterByDate('${dateStr}')" class="${bgClass} rounded-xl p-1 min-h-[42px] flex flex-col justify-between items-center text-[9px] cursor-pointer">
             <span class="font-bold text-slate-400">${day}</span>
-            ${dayTxs.length > 0 ? `
-              <div class="leading-tight">
-                ${inc > 0 ? `<div class="text-emerald-500 font-semibold">+₹${Math.round(inc)}</div>` : ''}
-                ${exp > 0 ? `<div class="text-rose-500 font-semibold">-₹${Math.round(exp)}</div>` : ''}
-              </div>
-            ` : ''}
+            ${dayTxs.length > 0 ? `<div class="leading-tight">${inc > 0 ? `<div class="text-emerald-500">+₹${Math.round(inc)}</div>` : ''}${exp > 0 ? `<div class="text-rose-500">-₹${Math.round(exp)}</div>` : ''}</div>` : ''}
           </div>
         `;
       }
-
       calendarGrid.innerHTML = gridHTML;
     }
 
     // Startup Execution
     initTheme();
     initYearDropdown();
+    populateCategories();
+    
+    const localData = localStorage.getItem('transactions');
+    if (localData) {
+      transactions = JSON.parse(localData);
+      saveAndRender(false);
+    }
 
-    loadHandleFromIDB().then(async (handle) => {
-      if (handle) {
-        fileHandle = handle;
-        try {
-          const file = await fileHandle.getFile();
-          const content = await file.text();
-          parseAndLoadCSV(content);
-          updateFileStatusUI(fileHandle.name);
-          return;
-        } catch (e) {
-          console.warn("Handle permission or file access fallback");
-        }
-      }
-      const localData = localStorage.getItem('transactions');
-      if (localData) {
-        transactions = JSON.parse(localData);
-        saveAndRender(false);
-      }
-    });
+    window.onload = function() {
+      initGoogleAuth();
+    };
   </script>
 </body>
 </html>
