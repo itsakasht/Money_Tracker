@@ -2,12 +2,56 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Money Tracker</title>
 
   <!-- SVG App Logo / Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>">
+
+  <!-- Embedded Web App Manifest for PWA Standards -->
+  <script>
+    const manifestData = {
+      "id": "com.moneytracker.pwa",
+      "name": "Money Tracker",
+      "short_name": "Tracker",
+      "start_url": "./index.html",
+      "scope": "./",
+      "display": "standalone",
+      "display_override": ["standalone", "window-controls-overlay"],
+      "background_color": "#090d16",
+      "theme_color": "#4f46e5",
+      "orientation": "portrait",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%234f46e5'/><circle cx='380' cy='380' r='90' fill='%2310b981' opacity='0.3'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='%23ffffff'>₹</text></svg>",
+          "sizes": "512x512",
+          "type": "image/svg+xml",
+          "purpose": "any maskable"
+        }
+      ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = URL.createObjectURL(manifestBlob);
+    document.head.appendChild(manifestLink);
+
+    // Register Minimal Service Worker for PWA Standalone Mode
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', (e) => self.skipWaiting());
+        self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+      `;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Note:', err));
+    }
+  </script>
 
   <!-- Google Identity Services Library -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -24,7 +68,7 @@
     input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(0.6); }
   </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex justify-center pb-24 font-sans">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex justify-center pb-24 font-sans antialiased select-none">
 
   <main class="w-full max-w-md p-4 space-y-5">
     
@@ -36,7 +80,7 @@
         </div>
         <div>
           <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Money Tracker</h1>
-          <p id="drive-status-label" class="text-[11px] text-slate-400 font-medium">Local & Cloud Ledger</p>
+          <p id="drive-status-label" class="text-[11px] text-slate-400 font-medium">Local Ledger (Offline)</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -56,8 +100,8 @@
       <form id="tx-form" onsubmit="addTransaction(event)" class="space-y-4">
         <!-- Expense / Income Switcher -->
         <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl">
-          <button type="button" id="btn-expense" onclick="setType('expense')" class="py-2 text-xs font-semibold rounded-xl bg-rose-500 text-white shadow-sm">Expense</button>
-          <button type="button" id="btn-income" onclick="setType('income')" class="py-2 text-xs font-semibold rounded-xl text-slate-400">Income</button>
+          <button type="button" id="btn-expense" onclick="setType('expense')" class="py-2 text-xs font-semibold rounded-xl bg-rose-500 text-white shadow-sm transition-all">Expense</button>
+          <button type="button" id="btn-income" onclick="setType('income')" class="py-2 text-xs font-semibold rounded-xl text-slate-400 transition-all">Income</button>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -102,10 +146,13 @@
           <input type="text" id="note" placeholder="e.g. Dinner at Taj, Uber trip, Salary" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2 text-slate-900 dark:text-white text-xs focus:outline-none">
         </div>
 
-        <!-- Splitwise Toggle Switch -->
+        <!-- Custom iOS/Tailwind Toggle Switch for Bill Splitting -->
         <div id="split-toggle-container" class="pt-1 flex items-center justify-between">
           <span class="text-xs text-slate-700 dark:text-slate-300 font-semibold">Split bill with friends</span>
-          <input type="checkbox" id="is-split" onchange="toggleSplitContainer()" class="w-4 h-4 rounded text-indigo-600">
+          <label for="is-split" class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="is-split" onchange="toggleSplitContainer()" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-indigo-600"></div>
+          </label>
         </div>
 
         <div id="split-section" class="hidden space-y-3 p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -116,7 +163,7 @@
           <div id="friends-rows" class="space-y-2"></div>
         </div>
 
-        <button type="submit" class="w-full py-3.5 bg-indigo-600 font-bold rounded-2xl text-sm text-white shadow-lg shadow-indigo-600/25">
+        <button type="submit" class="w-full py-3.5 bg-indigo-600 font-bold rounded-2xl text-sm text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98] transition-all">
           Save Transaction
         </button>
       </form>
@@ -144,15 +191,38 @@
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">👥 People Ledger</h3>
         <span id="people-count-badge" class="text-[10px] text-slate-400 font-semibold">0 active</span>
       </div>
-      <input type="text" id="person-search" oninput="renderPeopleLedger()" placeholder="🔍 Search person..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs">
+      <input type="text" id="person-search" oninput="renderPeopleLedger()" placeholder="🔍 Search person..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs focus:outline-none">
       <div id="people-balances" class="space-y-3"></div>
     </section>
 
-    <!-- Category Breakdown Chart -->
+    <!-- Category Breakdown Chart & Period Selector -->
     <section class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 space-y-3">
-      <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Category Breakdown</h3>
+      <div class="flex justify-between items-center gap-2 flex-wrap">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Category Breakdown</h3>
+        
+        <select id="chart-period-select" onchange="renderChart()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-none">
+          <option value="all">Total (All Time)</option>
+        </select>
+      </div>
+
       <div class="relative w-full h-44 flex justify-center items-center">
         <canvas id="category-chart"></canvas>
+      </div>
+
+      <!-- Selected Period Mini Breakdown Overview -->
+      <div id="period-summary-container" class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-center">
+        <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl">
+          <span class="text-[9px] text-slate-400 block font-medium">Period Income</span>
+          <span id="period-income" class="text-xs font-bold text-emerald-500">₹0</span>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl">
+          <span class="text-[9px] text-slate-400 block font-medium">Period Spend</span>
+          <span id="period-expense" class="text-xs font-bold text-rose-500">₹0</span>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl">
+          <span class="text-[9px] text-slate-400 block font-medium">Period Net</span>
+          <span id="period-net" class="text-xs font-bold text-amber-500">₹0</span>
+        </div>
       </div>
     </section>
 
@@ -190,24 +260,28 @@
       </div>
     </section>
 
-    <!-- Google Drive Cloud Sync Card -->
+    <!-- Google Drive Smart-Sync Card (Bottom) -->
     <section class="bg-indigo-900/10 border border-indigo-500/30 rounded-3xl p-4 space-y-3 shadow-sm">
       <div class="flex justify-between items-center">
         <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider">☁️ Google Drive Cloud Sync</h3>
-        <span id="sync-badge" class="text-[10px] bg-slate-500/10 text-slate-400 px-2.5 py-0.5 rounded-full font-semibold">Not Connected</span>
+        <span id="sync-badge" class="text-[10px] bg-slate-500/10 text-slate-400 px-2.5 py-0.5 rounded-full font-semibold">Offline</span>
       </div>
       
-      <p class="text-[11px] text-slate-400 leading-snug">
-        Connect Google Drive to automatically sync your <code>money_tracker.csv</code> database across laptop and phone.
+      <p id="sync-details-text" class="text-[11px] text-slate-400 leading-snug">
+        Two-way auto-sync connects your local storage with Google Drive based on the latest updated timestamp.
       </p>
 
-      <div class="grid grid-cols-2 gap-2 pt-1">
-        <button id="gdrive-auth-btn" onclick="handleAuthClick()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1">
-          <span>🔑</span> <span id="auth-btn-text">Connect Drive</span>
+      <div class="grid grid-cols-3 gap-2 pt-1">
+        <button id="gdrive-auth-btn" onclick="handleAuthClick()" class="col-span-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1 transition-all">
+          <span>🔑</span> <span id="auth-btn-text">Connect</span>
         </button>
 
-        <button onclick="exportCSV()" class="w-full py-2.5 bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 font-bold text-xs rounded-xl text-center">
-          📥 Backup CSV
+        <button id="manual-sync-btn" onclick="smartSyncWithDrive(true)" class="col-span-1 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1 transition-all">
+          <span>🔄</span> <span>Sync Now</span>
+        </button>
+
+        <button onclick="exportCSV()" class="col-span-1 py-2.5 bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 font-bold text-xs rounded-xl text-center">
+          📥 Backup
         </button>
       </div>
     </section>
@@ -233,7 +307,7 @@
     const DRIVE_FILE_NAME = "money_tracker.csv";
     const CSV_HEADER = "ID,Type,Category,Total Amount,My Net Share,Date,Splits,BorrowedFrom,Note\n";
 
-    const EXPENSE_CATEGORIES = [
+    const DEFAULT_EXPENSES = [
       { value: "Food", label: "🍔 Food" },
       { value: "Entertainment", label: "🎬 Entertainment" },
       { value: "Health", label: "🩺 Health" },
@@ -246,12 +320,14 @@
       { value: "Other", label: "📦 Other" }
     ];
 
-    const INCOME_CATEGORIES = [
+    const DEFAULT_INCOME = [
       { value: "Income", label: "💰 Income" },
       { value: "Deposit", label: "🏦 Deposit" },
       { value: "People", label: "👥 People / Loan" },
       { value: "Other", label: "📦 Other" }
     ];
+
+    let customCategories = JSON.parse(localStorage.getItem('custom_categories') || '{"expense":[],"income":[]}');
 
     let transactions = [];
     let currentType = 'expense';
@@ -262,40 +338,96 @@
     let lastDeletedStack = [];
     let undoToastTimer = null;
 
+    // Mutex & Sync State
+    let isSyncing = false;
     let tokenClient = null;
     let accessToken = localStorage.getItem('gdrive_access_token') || null;
     let driveFileId = localStorage.getItem('gdrive_file_id') || null;
 
-    // Helper to format any date variation into strict YYYY-MM-DD
-    function normalizeDate(rawDate) {
-      if (!rawDate) return new Date().toISOString().split('T')[0];
-      const clean = rawDate.replace(/^"|"$/g, '').trim().replace(/\//g, '-');
-      const parts = clean.split('-');
-      if (parts.length === 3) {
-        if (parts[0].length === 4) {
-          // YYYY-M-D -> YYYY-MM-DD
-          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-        } else if (parts[2].length === 4) {
-          // D-M-YYYY -> YYYY-MM-DD
-          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-      }
-      return clean;
+    function cleanDateStr(str) {
+      if (!str) return '';
+      return str.replace(/^"|"$/g, '').replace(/[\r\n]/g, '').trim();
+    }
+
+    function getLocalUpdatedAt() {
+      return parseInt(localStorage.getItem('local_updated_at') || '0', 10);
+    }
+
+    function setLocalUpdatedAt(ts = Date.now()) {
+      localStorage.setItem('local_updated_at', ts.toString());
     }
 
     function populateCategories() {
       const select = document.getElementById('category');
       select.innerHTML = '';
-      const list = currentType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-      list.forEach(cat => {
+      
+      const defaults = currentType === 'expense' ? DEFAULT_EXPENSES : DEFAULT_INCOME;
+      const customs = customCategories[currentType] || [];
+
+      defaults.forEach(cat => {
         const opt = document.createElement('option');
         opt.value = cat.value;
         opt.textContent = cat.label;
         select.appendChild(opt);
       });
+
+      if (customs.length > 0) {
+        const group = document.createElement('optgroup');
+        group.label = "Custom Categories";
+        customs.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.value;
+          opt.textContent = `${c.emoji || '🏷️'} ${c.label}`;
+          group.appendChild(opt);
+        });
+        select.appendChild(group);
+      }
+
+      const customOpt = document.createElement('option');
+      customOpt.value = "__ADD_CUSTOM__";
+      customOpt.textContent = "➕ Add Custom Category...";
+      select.appendChild(customOpt);
+
       handleCategoryChange();
     }
 
+    function handleCategoryChange() {
+      const select = document.getElementById('category');
+      const cat = select.value;
+
+      if (cat === '__ADD_CUSTOM__') {
+        const newCatName = prompt(`Enter new ${currentType} category name:`);
+        if (newCatName && newCatName.trim()) {
+          const emoji = prompt("Enter an emoji for this category (or leave blank for 🏷️):") || "🏷️";
+          const formattedValue = newCatName.trim();
+          
+          if (!customCategories[currentType]) customCategories[currentType] = [];
+          if (!customCategories[currentType].some(c => c.value.toLowerCase() === formattedValue.toLowerCase())) {
+            customCategories[currentType].push({ value: formattedValue, label: formattedValue, emoji: emoji.trim() });
+            localStorage.setItem('custom_categories', JSON.stringify(customCategories));
+          }
+          populateCategories();
+          select.value = formattedValue;
+        } else {
+          select.value = currentType === 'expense' ? 'Food' : 'Income';
+        }
+      }
+
+      const peopleOpts = document.getElementById('people-options');
+      const splitToggle = document.getElementById('split-toggle-container');
+
+      if (select.value === 'People') {
+        peopleOpts.classList.remove('hidden');
+        splitToggle.classList.add('hidden');
+        document.getElementById('is-split').checked = false;
+        toggleSplitContainer();
+      } else {
+        peopleOpts.classList.add('hidden');
+        if (currentType === 'expense') splitToggle.classList.remove('hidden');
+      }
+    }
+
+    // Google Auth Initializer
     function initGoogleAuth() {
       if (typeof google === 'undefined' || GOOGLE_CLIENT_ID.includes("YOUR_CLIENT_ID_HERE")) return;
       
@@ -307,19 +439,19 @@
           accessToken = resp.access_token;
           localStorage.setItem('gdrive_access_token', accessToken);
           updateDriveUI(true);
-          await syncWithGoogleDrive();
+          await smartSyncWithDrive(true);
         },
       });
 
       if (accessToken) {
         updateDriveUI(true);
-        syncWithGoogleDrive();
+        smartSyncWithDrive(false);
       }
     }
 
     function handleAuthClick() {
-      if (!tokenClient) return alert("Please set your Google Client ID!");
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      if (!tokenClient) return alert("Please configure Google Client ID!");
+      tokenClient.requestAccessToken({ prompt: '' });
     }
 
     function updateDriveUI(connected) {
@@ -328,22 +460,40 @@
       const btnText = document.getElementById('auth-btn-text');
 
       if (connected) {
-        badge.textContent = "Drive Connected";
+        badge.textContent = "Connected";
         badge.className = "text-[10px] bg-emerald-500/10 text-emerald-500 px-2.5 py-0.5 rounded-full font-semibold";
         label.textContent = "Synced with Drive";
-        btnText.textContent = "Re-Sync Drive";
+        btnText.textContent = "Reconnect";
       }
     }
 
-    async function syncWithGoogleDrive() {
-      if (!accessToken) return;
+    // Two-Way Timestamp Smart-Sync
+    async function smartSyncWithDrive(manualTrigger = false) {
+      if (!navigator.onLine) {
+        if (manualTrigger) alert("You are currently offline. Changes are saved locally and will auto-sync when online.");
+        return;
+      }
+      if (!accessToken || isSyncing) return;
+      isSyncing = true;
+
+      const syncDetails = document.getElementById('sync-details-text');
+      if (manualTrigger) syncDetails.textContent = "Checking for updates between local storage and Drive...";
+
       try {
         const keyParam = GOOGLE_API_KEY ? `&key=${GOOGLE_API_KEY}` : '';
 
+        // 1. Locate or get File Metadata from Drive
         if (!driveFileId) {
-          const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false${keyParam}`, {
+          const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}' and trashed=false&fields=files(id,modifiedTime)${keyParam}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
+
+          if (searchRes.status === 401) {
+            tokenClient.requestAccessToken({ prompt: '' });
+            isSyncing = false;
+            return;
+          }
+
           const searchData = await searchRes.json();
           if (searchData.files && searchData.files.length > 0) {
             driveFileId = searchData.files[0].id;
@@ -351,19 +501,46 @@
           }
         }
 
-        if (driveFileId) {
+        // 2. If no Drive file exists at all, create it from local
+        if (!driveFileId) {
+          await uploadToGoogleDrive(generateCSVString());
+          syncDetails.textContent = "Initial file created and uploaded to Google Drive.";
+          isSyncing = false;
+          return;
+        }
+
+        // 3. Fetch Drive file metadata (modifiedTime)
+        const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?fields=modifiedTime${keyParam}`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const metaData = await metaRes.json();
+        const driveModifiedTime = new Date(metaData.modifiedTime).getTime();
+        const localTime = getLocalUpdatedAt();
+
+        // 4. Compare timestamps (allow 2s buffer for clock drift)
+        if (driveModifiedTime > localTime + 2000) {
+          // Drive is newer: Download and update local
           const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media${keyParam}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           if (contentRes.ok) {
             const csvText = await contentRes.text();
             parseAndLoadCSV(csvText);
+            setLocalUpdatedAt(driveModifiedTime);
+            syncDetails.textContent = `Downloaded latest version from Drive (${new Date(driveModifiedTime).toLocaleTimeString()}).`;
           }
-        } else {
+        } else if (localTime > driveModifiedTime + 2000) {
+          // Local is newer: Upload local state to Drive
           await uploadToGoogleDrive(generateCSVString());
+          syncDetails.textContent = `Uploaded latest local changes to Drive (${new Date().toLocaleTimeString()}).`;
+        } else {
+          syncDetails.textContent = "Everything is up to date.";
         }
       } catch (err) {
-        console.error("Drive sync error:", err);
+        console.error("Smart Sync error:", err);
+        syncDetails.textContent = "Sync paused (network/permission). Will retry automatically.";
+      } finally {
+        isSyncing = false;
       }
     }
 
@@ -396,7 +573,7 @@
           });
         }
       } catch (err) {
-        console.error("Drive upload failed:", err);
+        console.error("Drive upload error:", err);
       }
     }
 
@@ -435,33 +612,17 @@
       const splitToggle = document.getElementById('split-toggle-container');
 
       if (type === 'expense') {
-        expBtn.className = "py-2 text-xs font-semibold rounded-xl bg-rose-500 text-white shadow-sm";
-        incBtn.className = "py-2 text-xs font-semibold rounded-xl text-slate-400";
+        expBtn.className = "py-2 text-xs font-semibold rounded-xl bg-rose-500 text-white shadow-sm transition-all";
+        incBtn.className = "py-2 text-xs font-semibold rounded-xl text-slate-400 transition-all";
         splitToggle.classList.remove('hidden');
       } else {
-        incBtn.className = "py-2 text-xs font-semibold rounded-xl bg-emerald-500 text-white shadow-sm";
-        expBtn.className = "py-2 text-xs font-semibold rounded-xl text-slate-400";
+        incBtn.className = "py-2 text-xs font-semibold rounded-xl bg-emerald-500 text-white shadow-sm transition-all";
+        expBtn.className = "py-2 text-xs font-semibold rounded-xl text-slate-400 transition-all";
         splitToggle.classList.add('hidden');
         document.getElementById('is-split').checked = false;
         toggleSplitContainer();
       }
       populateCategories();
-    }
-
-    function handleCategoryChange() {
-      const cat = document.getElementById('category').value;
-      const peopleOpts = document.getElementById('people-options');
-      const splitToggle = document.getElementById('split-toggle-container');
-
-      if (cat === 'People') {
-        peopleOpts.classList.remove('hidden');
-        splitToggle.classList.add('hidden');
-        document.getElementById('is-split').checked = false;
-        toggleSplitContainer();
-      } else {
-        peopleOpts.classList.add('hidden');
-        if (currentType === 'expense') splitToggle.classList.remove('hidden');
-      }
     }
 
     function toggleSplitContainer() {
@@ -491,7 +652,7 @@
       e.preventDefault();
       const totalAmount = parseFloat(document.getElementById('amount').value);
       const category = document.getElementById('category').value;
-      const date = normalizeDate(document.getElementById('date').value);
+      const date = cleanDateStr(document.getElementById('date').value);
       const note = document.getElementById('note').value.trim();
       const isSplit = document.getElementById('is-split').checked && currentType === 'expense';
 
@@ -528,6 +689,7 @@
       }
 
       transactions.unshift({ id: Date.now(), type: effectiveType, totalAmount, myShare, category, date, splits, borrowedFrom, note });
+      setLocalUpdatedAt();
       saveAndRender();
 
       document.getElementById('tx-form').reset();
@@ -543,6 +705,7 @@
         const [deletedItem] = transactions.splice(idx, 1);
         lastDeletedStack.push({ item: deletedItem, originalIndex: idx });
         
+        setLocalUpdatedAt();
         showUndoToast();
         saveAndRender();
       }
@@ -575,6 +738,7 @@
         } else {
           transactions.unshift(item);
         }
+        setLocalUpdatedAt();
         hideUndoToast();
         saveAndRender();
       }
@@ -589,6 +753,7 @@
       if (confirm("Clear all transactions?")) {
         transactions = [];
         lastDeletedStack = [];
+        setLocalUpdatedAt();
         hideUndoToast();
         saveAndRender();
       }
@@ -619,12 +784,8 @@
       for (let i = 0; i < text.length; i++) {
         const c = text[i];
         if (c === '"') {
-          if (inQuotes && text[i + 1] === '"') {
-            cur += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
+          if (inQuotes && text[i + 1] === '"') { cur += '"'; i++; }
+          else { inQuotes = !inQuotes; }
         } else if (c === ',' && !inQuotes) {
           result.push(cur.trim());
           cur = '';
@@ -651,9 +812,7 @@
           const category = cols[2].replace(/^"|"$/g, '').trim();
           const totalAmount = parseFloat(cols[3]) || 0;
           const myShare = parseFloat(cols[4]) || 0;
-          
-          // Apply date normalization automatically
-          const date = normalizeDate(cols[5]);
+          const date = cleanDateStr(cols[5]);
 
           let splits = [];
           if (cols[6]) {
@@ -676,9 +835,37 @@
       saveAndRender(false);
     }
 
+    function updateChartPeriodDropdown() {
+      const select = document.getElementById('chart-period-select');
+      const curVal = select.value;
+      
+      const monthsSet = new Set();
+      transactions.forEach(t => {
+        const d = cleanDateStr(t.date);
+        if (d && d.length >= 7) {
+          monthsSet.add(d.substring(0, 7));
+        }
+      });
+
+      const sortedMonths = Array.from(monthsSet).sort().reverse();
+      
+      select.innerHTML = '<option value="all">Total (All Time)</option>';
+      sortedMonths.forEach(m => {
+        const [y, mo] = m.split('-');
+        const monthName = new Date(parseInt(y), parseInt(mo) - 1, 1).toLocaleString('default', { month: 'short' });
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = `${monthName} ${y}`;
+        select.appendChild(opt);
+      });
+
+      if (sortedMonths.includes(curVal)) select.value = curVal;
+      else select.value = "all";
+    }
+
     function saveAndRender(syncDrive = true) {
       localStorage.setItem('transactions', JSON.stringify(transactions));
-      if (syncDrive && accessToken) uploadToGoogleDrive(generateCSVString());
+      if (syncDrive && accessToken) smartSyncWithDrive(false);
 
       const income = transactions.filter(t => t.type === 'income').reduce((a, b) => a + b.myShare, 0);
       const expense = transactions.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
@@ -687,6 +874,7 @@
       document.getElementById('total-income').textContent = `₹${income.toFixed(2)}`;
       document.getElementById('total-expense').textContent = `₹${expense.toFixed(2)}`;
 
+      updateChartPeriodDropdown();
       renderPeopleLedger();
       renderList();
       renderChart();
@@ -771,7 +959,7 @@
     }
 
     function filterByDate(dateStr) {
-      selectedGridDate = normalizeDate(dateStr);
+      selectedGridDate = cleanDateStr(dateStr);
       document.getElementById('active-date-filter').classList.remove('hidden');
       document.getElementById('filter-date-label').textContent = `Showing: ${selectedGridDate}`;
       renderList();
@@ -791,7 +979,9 @@
       const expandBtnContainer = document.getElementById('logs-expand-container');
       const toggleBtn = document.getElementById('logs-toggle-btn');
 
-      let filteredTxs = selectedGridDate ? transactions.filter(t => t.date === selectedGridDate) : transactions;
+      let filteredTxs = selectedGridDate 
+        ? transactions.filter(t => cleanDateStr(t.date) === selectedGridDate) 
+        : transactions;
       const totalCount = filteredTxs.length;
 
       if (totalCount === 0) {
@@ -825,7 +1015,7 @@
           ? `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">▲</span>`
           : `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-rose-500/10 text-rose-500 font-bold text-xs">▼</span>`;
 
-        let subDetail = tx.date;
+        let subDetail = cleanDateStr(tx.date);
         if (tx.category === 'People') {
           subDetail += tx.borrowedFrom ? ` • From ${tx.borrowedFrom}` : ` • Paid to ${tx.splits?.[0]?.name || ''}`;
         } else if (tx.myShare !== tx.totalAmount) {
@@ -858,7 +1048,22 @@
 
     function renderChart() {
       const ctx = document.getElementById('category-chart').getContext('2d');
-      const expenses = transactions.filter(t => t.type === 'expense' && t.myShare > 0);
+      const selectedPeriod = document.getElementById('chart-period-select')?.value || 'all';
+
+      let targetTxs = transactions;
+      if (selectedPeriod !== 'all') {
+        targetTxs = transactions.filter(t => cleanDateStr(t.date).startsWith(selectedPeriod));
+      }
+
+      const pIncome = targetTxs.filter(t => t.type === 'income').reduce((a, b) => a + b.myShare, 0);
+      const pExpense = targetTxs.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
+      const pNet = pIncome - pExpense;
+
+      document.getElementById('period-income').textContent = `₹${pIncome.toFixed(2)}`;
+      document.getElementById('period-expense').textContent = `₹${pExpense.toFixed(2)}`;
+      document.getElementById('period-net').textContent = `₹${pNet.toFixed(2)}`;
+
+      const expenses = targetTxs.filter(t => t.type === 'expense' && t.myShare > 0);
       
       const categoryTotals = {};
       expenses.forEach(t => { categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.myShare; });
@@ -873,11 +1078,24 @@
         type: 'pie',
         data: {
           labels: labels,
-          datasets: [{ data: data, backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#eab308', '#64748b', '#10b981', '#f97316', '#06b6d4', '#8b5cf6'], borderWidth: 0 }]
+          datasets: [{
+            data: data,
+            backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#eab308', '#64748b', '#10b981', '#f97316', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b'],
+            borderWidth: 0
+          }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'right', labels: { boxWidth: 10, color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b', font: { size: 10 } } } }
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                boxWidth: 10,
+                color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b',
+                font: { size: 10 }
+              }
+            }
+          }
         }
       });
     }
@@ -894,13 +1112,15 @@
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayTxs = transactions.filter(t => t.date === dateStr);
+        const dayTxs = transactions.filter(t => cleanDateStr(t.date) === dateStr);
 
         const inc = dayTxs.filter(t => t.type === 'income').reduce((a, b) => a + b.myShare, 0);
         const exp = dayTxs.filter(t => t.type === 'expense').reduce((a, b) => a + b.myShare, 0);
 
         const isSelected = selectedGridDate === dateStr;
-        let bgClass = isSelected ? "bg-indigo-600/30 border-2 border-indigo-500 shadow-md" : (dayTxs.length > 0 ? ((inc - exp) >= 0 ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-rose-500/10 border border-rose-500/30") : "bg-slate-100 dark:bg-slate-950");
+        let bgClass = isSelected 
+          ? "bg-indigo-600/30 border-2 border-indigo-500 shadow-md" 
+          : (dayTxs.length > 0 ? ((inc - exp) >= 0 ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-rose-500/10 border border-rose-500/30") : "bg-slate-100 dark:bg-slate-950");
 
         gridHTML += `
           <div onclick="filterByDate('${dateStr}')" class="${bgClass} rounded-xl p-1 min-h-[42px] flex flex-col justify-between items-center text-[9px] cursor-pointer">
@@ -926,6 +1146,10 @@
     window.onload = function() {
       initGoogleAuth();
     };
+
+    // Auto-sync triggers on Network Reconnection & App Focus
+    window.addEventListener('online', () => smartSyncWithDrive(false));
+    window.addEventListener('focus', () => smartSyncWithDrive(false));
   </script>
 </body>
 </html>
