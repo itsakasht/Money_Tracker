@@ -25,6 +25,7 @@ You do not need to download an APK or configure developer environments to use th
 3. **Tracking Debts:** Use the People Ledger search bar to look up specific names and view outstanding balances or past transactions.
 4. **Visualize spending on Calendar:** Review spending habits via category breakdown charts and inspect daily activity through an interactive calendar grid.
 5. **Filtering by Date:** Tap any date block in the Activity Grid calendar to filter visible logs for that specific day.
+6. **Category Breakdown:** View monthly or all time category wise expenses. You can also add custom categories if needed.
 
 ### Setting Up Google Drive
 
